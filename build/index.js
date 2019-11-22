@@ -89,10 +89,10 @@ export class RevealMd {
             }
         });
     }
-    get headers() {
+    getHeaders() {
         return this._headers;
     }
-    set headers(h) {
+    setHeaders(h) {
         this.onReady((reveal) => {
             if (h.theme) {
                 document.getElementById("reveal-theme").href = this.cdn + `css/theme/${h.theme}.css`;
@@ -117,7 +117,7 @@ export class RevealMd {
     }
     update(markdown) {
         const { data, content } = matter(markdown);
-        this.headers = data;
+        this.setHeaders(data);
         const setBody = () => {
             let reverseOffset = 0;
             const newRaw = content.split(/\r?\n===\r?\n/g).map((el, x) => {

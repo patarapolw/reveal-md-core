@@ -135,11 +135,11 @@ export class RevealMd {
     });
   }
 
-  get headers(): any {
+  getHeaders(): any {
     return this._headers;
   }
 
-  set headers(h: any) {
+  setHeaders(h: any) {
     this.onReady((reveal) => {
       if (h.theme) {
         (document.getElementById("reveal-theme") as HTMLLinkElement).href = this.cdn + `css/theme/${h.theme}.css`;
@@ -170,7 +170,7 @@ export class RevealMd {
   update(markdown: string) {
     const { data, content } = matter(markdown);
 
-    this.headers = data;
+    this.setHeaders(data);
 
     const setBody = () => {
       let reverseOffset = 0;

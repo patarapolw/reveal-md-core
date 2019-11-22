@@ -42,8 +42,8 @@ export declare class RevealMd {
         pug?: IHyperPugFilters;
         cdn?: string;
     }, revealOptions?: Partial<IRevealOptions>);
-    get headers(): any;
-    set headers(h: any);
+    getHeaders(): any;
+    setHeaders(h: any): void;
     update(markdown: string): void;
     onReady(fn: (reveal?: RevealStatic) => void): void;
     once(type: string, listener: () => void): void;
