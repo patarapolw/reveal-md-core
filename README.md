@@ -12,21 +12,6 @@ content (Pug or HTML or extended Markdown)
 ```
 
 - The slides marked with `// global` or `// hidden` will be hidden.
-- Implementing `<style scoped>` would also be nice, but I haven't done it yet.
-- Showdown extensions (with [indented-filter](https://github.com/patarapolw/indented-filter))
-- HyperPug extensions
-
-## Exporting to single file HTML
-
-I have already tested this in [/scripts/test.ts](/scripts/test.ts)
-
-```typescript
-import RevealMd from "@patarapolw/reveal-md-core";
-import fs from "fs";
-
-const r = new RevealMd();
-r.update(fs.readFileSync("example.md", "utf8"));
-```
 
 ## Live editor
 
@@ -37,3 +22,7 @@ See <https://github.com/patarapolw/reveal-md>.
 ```
 npm i https://github.com/patarapolw/reveal-md-core.git
 ```
+
+## Local Reveal.js files
+
+This can be done by serving [Reveal.js](https://github.com/hakimel/reveal.js) folder from `/reveal`, either via the same web server, or via proxy. It will be loaded automatically.
