@@ -1,7 +1,6 @@
 {
-  "name": "reveal-md-core",
+  "name": "@patarapolw/reveal-md-core",
   "version": "0.1.0",
-  "private": true,
   "description": "A framework for manipulating Reveal.js <-> Markdown. With Showdown extensions and HyperPug. See https://patarapolw.github.com/reveal-md",
   "main": "index.js",
   "scripts": {
@@ -16,6 +15,7 @@
   ],
   "author": "Pacharapol Withayasakpunt <patarapolw@gmail.com> (https://polvcode.dev)",
   "license": "MIT",
+  "repository": "github:patarapolw/reveal-md-core",
   "devDependencies": {
     "@types/hyperscript": "0.0.3",
     "@types/node": "^12.12.11",
