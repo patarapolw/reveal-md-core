@@ -385,11 +385,9 @@ export default class RevealMd {
         return ''
       } else if (lang === 'pre') {
         return h('pre', content).outerHTML
-      } else if (lang === 'html') {
+      } else {
         return this.makeHtml(content, lang)
       }
-
-      return p0
     })
 
     if (type === 'global') {
