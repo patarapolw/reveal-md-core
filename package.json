@@ -1,6 +1,6 @@
 {
   "name": "@patarapolw/reveal-md-core",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "A framework for manipulating Reveal.js <-> Markdown. With Showdown extensions and HyperPug. See https://patarapolw.github.com/reveal-md",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -26,7 +26,7 @@
     "gray-matter": "^4.0.2",
     "hyperpug": "^1.0.4",
     "hyperscript": "^2.0.2",
-    "indent-utils": "^1.0.2",
+    "indent-utils": "^1.0.3",
     "js-yaml": "^3.13.1",
     "scope-css": "^1.2.1"
   },
