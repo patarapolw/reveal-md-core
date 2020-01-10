@@ -1,11 +1,9 @@
-import pug from 'hyperpug'
-import showdown from 'showdown'
+import qs from 'querystring'
+
 import h from 'hyperscript'
 import matter from 'gray-matter'
+import yaml from 'js-yaml'
 import scopeCss from 'scope-css'
-import qs from 'querystring'
-import stringify from 'es6-json-stable-stringify'
-import './reveal-md.scss'
 
 const currentSlide = location.hash
 
@@ -24,64 +22,6 @@ export interface ISlide {
   raw: string
 }
 
-let revealCdn = 'https://cdn.jsdelivr.net/npm/reveal.js@3.8.0/'
-const mdConverter = new showdown.Converter()
-mdConverter.setFlavor('github')
-
-async function main () {
-  const { data, content } = matter(process.env.VUE_APP_PLACEHOLDER || '')
-
-  let defaults = {
-    headers: data,
-    markdown: content,
-  }
-
-  try {
-    const r = await fetch('/reveal/js/reveal.js', {
-      method: 'HEAD',
-    })
-    if (r.status !== 200) {
-      throw new Error()
-    }
-
-    revealCdn = '/reveal/'
-    document.body.appendChild(Object.assign(document.createElement('script'), {
-      src: `${revealCdn}js/reveal.js`,
-    }))
-  } catch (e) {
-    document.body.appendChild(Object.assign(document.createElement('script'), {
-      src: `${revealCdn}js/reveal.min.js`,
-    }))
-  }
-
-  document.head.appendChild(Object.assign(document.createElement('link'), {
-    rel: 'stylesheet',
-    href: `${revealCdn}css/reveal.css`,
-    type: 'text/css',
-  }))
-
-  document.head.appendChild(Object.assign(document.createElement('link'), {
-    rel: 'stylesheet',
-    href: `${revealCdn}css/theme/white.css`,
-    type: 'text/css',
-    id: 'reveal-theme',
-  }))
-
-  const url = new URL(location.href)
-  const filename = url.searchParams.get('filename')
-  if (filename) {
-    const { data, content } = matter(await fetch(`/api/data?${qs.stringify({
-      filename,
-    })}`).then((r) => r.text()))
-    defaults = {
-      headers: data,
-      markdown: content,
-    }
-  }
-
-  new RevealMd(defaults)
-}
-
 export default class RevealMd {
   _headers: RevealOptions | null = null
   _queue: Array<(r?: RevealStatic) => void> = []
@@ -93,6 +33,51 @@ export default class RevealMd {
       slideNumber: true,
       hash: true,
     },
+  }
+
+  constructor (
+    public makeHtml: (s: string, ext?: string) => string,
+    /**
+     * Must include '/' trailing at the end
+     */
+    public cdn: string = 'https://cdn.jsdelivr.net/npm/reveal.js@3.8.0/',
+    placeholder: string = '',
+  ) {
+    window.revealMd = this
+
+    if (!this.cdn.includes('://')) {
+      document.body.appendChild(Object.assign(document.createElement('script'), {
+        src: `${this.cdn}js/reveal.js`,
+      }))
+    } else {
+      document.body.appendChild(Object.assign(document.createElement('script'), {
+        src: `${this.cdn}js/reveal.min.js`,
+      }))
+    }
+
+    document.head.appendChild(Object.assign(document.createElement('link'), {
+      rel: 'stylesheet',
+      href: `${this.cdn}css/reveal.css`,
+      type: 'text/css',
+    }))
+
+    document.head.appendChild(Object.assign(document.createElement('link'), {
+      rel: 'stylesheet',
+      href: `${this.cdn}css/theme/white.css`,
+      type: 'text/css',
+      id: 'reveal-theme',
+    }))
+
+    const { data, content } = matter(placeholder)
+
+    this.headers = data
+    this.markdown = content
+
+    this.onReady(() => {
+      if (currentSlide) {
+        location.hash = currentSlide
+      }
+    })
   }
 
   get headers (): RevealOptions & {
@@ -110,7 +95,7 @@ export default class RevealMd {
 
     subH = Object.assign(JSON.parse(JSON.stringify(this.defaults.reveal)), subH)
 
-    if (stringify(this._headers) === stringify(subH)) {
+    if (dumpObj(this._headers) === dumpObj(subH)) {
       return
     }
 
@@ -237,38 +222,13 @@ export default class RevealMd {
 
   set theme (t) {
     const el = document.getElementById('reveal-theme') as HTMLLinkElement
-    el.href = `${revealCdn}css/theme/${t}.css`
-  }
-
-  constructor (defaults: any) {
-    window.revealMd = this
-    this.markdown = defaults.markdown
-    this.headers = defaults.headers
-    this.onReady(() => {
-      if (currentSlide) {
-        location.hash = currentSlide
-      }
-    })
+    el.href = `${this.cdn}css/theme/${t}.css`
   }
 
   update (raw: string) {
     const { data, content } = matter(raw)
     this.markdown = content
     this.headers = data
-  }
-
-  mdConvert (s: string) {
-    return s.trim() ? mdConverter.makeHtml(s) : ''
-  }
-
-  pugConvert (s: string) {
-    return pug.compile({
-      filters: {
-        markdown: (ss) => {
-          return this.mdConvert(ss)
-        },
-      },
-    })(s)
   }
 
   onReady (fn?: (reveal?: RevealStatic) => void) {
@@ -278,13 +238,13 @@ export default class RevealMd {
         reveal.initialize({
           dependencies: [
             {
-              src: `${revealCdn}plugin/highlight/highlight.js`,
+              src: `${this.cdn}plugin/highlight/highlight.js`,
               async: true,
             },
           ],
         })
         if (this._queue.length > 0) {
-          this._queue.forEach(it => it(reveal))
+          this._queue.forEach((it) => it(reveal))
           reveal.slide(-1, -1, -1)
           reveal.sync()
         }
@@ -373,10 +333,8 @@ export default class RevealMd {
         return ''
       } else if (lang === 'pre') {
         return h('pre', content).outerHTML
-      } else if (lang === 'pug') {
-        return this.pugConvert(content)
       } else if (lang === 'html') {
-        return content
+        return this.makeHtml(content, lang)
       }
 
       return p0
@@ -389,7 +347,7 @@ export default class RevealMd {
 
     return {
       html: h(`#${id}`, {
-        innerHTML: this.mdConvert(html),
+        innerHTML: this.makeHtml(html),
       }).outerHTML,
       raw,
       id,
@@ -422,4 +380,12 @@ function hash (str: string) {
   return Math.round(Math.abs(hash)).toString(36)
 }
 
-main()
+function dumpObj (obj: any) {
+  return yaml.safeDump(obj, {
+    sortKeys: true,
+    skipInvalid: true,
+    indent: 0,
+    noArrayIndent: true,
+    flowLevel: 0,
+  })
+}

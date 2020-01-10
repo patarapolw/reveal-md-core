@@ -1,53 +1,42 @@
 {
   "name": "@patarapolw/reveal-md-core",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "A framework for manipulating Reveal.js <-> Markdown. With Showdown extensions and HyperPug. See https://patarapolw.github.com/reveal-md",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "prepack": "webpack",
+    "build": "tsc",
+    "postbuild": "parcel build -d umd browser/*.html",
+    "prepack": "yarn build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "reveal.js",
-    "presentation",
-    "hyperpug",
-    "showdown.js"
+    "presentation"
   ],
   "author": "Pacharapol Withayasakpunt <patarapolw@gmail.com> (https://polvcode.dev)",
   "license": "MIT",
   "repository": "github:patarapolw/reveal-md-core",
   "files": [
     "dist",
-    "index.html",
-    "index.js"
+    "umd"
   ],
-  "devDependencies": {
-    "@types/hyperscript": "0.0.3",
-    "@types/node": "^12.12.11",
+  "dependencies": {
     "@types/reveal": "^3.3.33",
-    "@types/showdown": "^1.9.3",
-    "@typescript-eslint/eslint-plugin": "^2.12.0",
-    "@typescript-eslint/parser": "^2.12.0",
-    "css-loader": "^3.4.0",
-    "es6-json-stable-stringify": "^2.0.2",
-    "eslint": ">=6.2.2",
-    "eslint-config-standard": "^14.1.0",
-    "eslint-plugin-html": "^6.0.0",
-    "eslint-plugin-import": ">=2.18.0",
-    "eslint-plugin-node": ">=9.1.0",
-    "eslint-plugin-promise": ">=4.2.1",
-    "eslint-plugin-standard": ">=4.0.0",
     "gray-matter": "^4.0.2",
-    "hyperpug": "^0.2.1",
+    "hyperpug": "^1.0.4",
     "hyperscript": "^2.0.2",
-    "sass": "^1.24.0",
-    "sass-loader": "^8.0.0",
-    "scope-css": "^1.2.1",
+    "indent-utils": "^1.0.2",
+    "js-yaml": "^3.13.1",
+    "scope-css": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/hyperscript": "^0.0.3",
+    "@types/js-yaml": "^3.12.1",
+    "@types/prismjs": "^1.16.0",
+    "@types/showdown": "^1.9.3",
+    "nanoid": "^2.1.9",
     "showdown": "^1.9.1",
-    "style-loader": "^1.1.1",
-    "ts-loader": "^6.2.1",
-    "typescript": "^3.7.4",
-    "webpack": "^4.41.4",
-    "webpack-cli": "^3.3.10"
+    "typescript": "^3.7.4"
   }
 }
