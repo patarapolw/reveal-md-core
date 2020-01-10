@@ -35,15 +35,19 @@ export default class RevealMd {
     },
   }
 
+  cdn = 'https://cdn.jsdelivr.net/npm/reveal.js@3.8.0/'
+
   constructor (
     public makeHtml: (s: string, ext?: string) => string,
     /**
      * Must include '/' trailing at the end
      */
-    public cdn: string = 'https://cdn.jsdelivr.net/npm/reveal.js@3.8.0/',
+    cdn: string | null = null,
     placeholder: string = '',
   ) {
     window.revealMd = this
+
+    this.cdn = cdn || this.cdn
 
     if (!this.cdn.includes('://')) {
       document.body.appendChild(Object.assign(document.createElement('script'), {
@@ -83,12 +87,22 @@ export default class RevealMd {
   get headers (): RevealOptions & {
     theme?: string
     title?: string
+    type?: 'reveal'
+    js?: string[]
+    css?: string[]
     } {
     return this._headers || this.defaults.reveal
   }
 
   set headers (h) {
-    let { theme, title, ...subH } = h
+    let {
+      theme,
+      title,
+      type,
+      js,
+      css,
+      ...subH
+    } = h
 
     this.theme = theme || 'white'
     this.title = title || ''
@@ -107,6 +121,44 @@ export default class RevealMd {
       }
     })
 
+    if (js) {
+      js.map((src) => {
+        const id = hash(src)
+
+        if (!document.querySelector(`script#${id}`)) {
+          document.body.append(Object.assign(document.createElement('script'), {
+            id,
+            src,
+            async: true,
+            className: 'reveal-md--custom-js',
+          }))
+        }
+      })
+    }
+
+    if (css) {
+      const ids = css.map((href) => {
+        const id = hash(href)
+
+        if (!document.querySelector(`link#${id}`)) {
+          document.head.append(Object.assign(document.createElement('link'), {
+            id,
+            href,
+            ref: 'stylesheet',
+            className: 'reveal-md--custom-css',
+          }))
+        }
+
+        return id
+      })
+
+      document.querySelectorAll('link.reveal-md--custom-css').forEach((el) => {
+        if (ids.includes(el.id)) {
+          el.remove()
+        }
+      })
+    }
+
     this._headers = subH
   }
 
@@ -119,7 +171,7 @@ export default class RevealMd {
     Array.from(globalEl.querySelectorAll('style.ref')).map((el) => el.remove())
 
     let xOffset = 0
-    const newRaw = s.split(/\r?\n===\r?\n/g).map((el, x) => {
+    const newRaw = s.split(/\r?\n(?:===|---)\r?\n/g).map((el, x) => {
       this._raw[x] = this._raw[x] || []
       const newRawSs = el.split(/\r?\n--\r?\n/g).map((ss) => this.parseSlide(ss))
       if (newRawSs.every((ss) => !ss.html)) {
@@ -377,7 +429,7 @@ function hash (str: string) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i)
     hash = hash & hash
   }
-  return Math.round(Math.abs(hash)).toString(36)
+  return 'h' + Math.round(Math.abs(hash)).toString(36)
 }
 
 function dumpObj (obj: any) {
