@@ -1,11 +1,8 @@
-import qs from 'querystring'
-
-import h from 'hyperscript'
-import matter from 'gray-matter'
+import he from 'he'
 import yaml from 'js-yaml'
-import scopeCss from 'scope-css'
+import stylis from 'stylis'
 
-const currentSlide = location.hash
+import { Matter } from './matter'
 
 declare global {
   interface Window {
@@ -36,46 +33,57 @@ export default class RevealMd {
   }
 
   cdn = 'https://cdn.jsdelivr.net/npm/reveal.js@3.8.0/'
+  matter = new Matter()
 
-  constructor (
+  constructor(
     public makeHtml: (s: string, ext?: string) => string,
     /**
      * Must include '/' trailing at the end
      */
     cdn: string | null = null,
-    placeholder: string = '',
+    placeholder: string = ''
   ) {
     window.revealMd = this
 
     this.cdn = cdn || this.cdn
 
     if (!this.cdn.includes('://')) {
-      document.body.appendChild(Object.assign(document.createElement('script'), {
-        src: `${this.cdn}js/reveal.js`,
-      }))
+      document.body.appendChild(
+        Object.assign(document.createElement('script'), {
+          src: `${this.cdn}js/reveal.js`,
+        })
+      )
     } else {
-      document.body.appendChild(Object.assign(document.createElement('script'), {
-        src: `${this.cdn}js/reveal.min.js`,
-      }))
+      document.body.appendChild(
+        Object.assign(document.createElement('script'), {
+          src: `${this.cdn}js/reveal.min.js`,
+        })
+      )
     }
 
-    document.head.appendChild(Object.assign(document.createElement('link'), {
-      rel: 'stylesheet',
-      href: `${this.cdn}css/reveal.css`,
-      type: 'text/css',
-    }))
+    document.head.appendChild(
+      Object.assign(document.createElement('link'), {
+        rel: 'stylesheet',
+        href: `${this.cdn}css/reveal.css`,
+        type: 'text/css',
+      })
+    )
 
-    document.head.appendChild(Object.assign(document.createElement('link'), {
-      rel: 'stylesheet',
-      href: `${this.cdn}css/theme/white.css`,
-      type: 'text/css',
-      id: 'reveal-theme',
-    }))
+    document.head.appendChild(
+      Object.assign(document.createElement('link'), {
+        rel: 'stylesheet',
+        href: `${this.cdn}css/theme/white.css`,
+        type: 'text/css',
+        id: 'reveal-theme',
+      })
+    )
 
-    const { data, content } = matter(placeholder)
+    const { header, content } = this.matter.parse(placeholder)
 
-    this.headers = data
+    this.headers = header
     this.markdown = content
+
+    const currentSlide = location.hash
 
     this.onReady(() => {
       if (currentSlide) {
@@ -84,25 +92,18 @@ export default class RevealMd {
     })
   }
 
-  get headers (): RevealOptions & {
+  get headers(): RevealOptions & {
     theme?: string
     title?: string
     type?: 'reveal'
     js?: string[]
     css?: string[]
-    } {
+  } {
     return this._headers || this.defaults.reveal
   }
 
-  set headers (h) {
-    let {
-      theme,
-      title,
-      type,
-      js,
-      css,
-      ...subH
-    } = h
+  set headers(h) {
+    let { theme, title, type, js, css, ...subH } = h
 
     this.theme = theme || 'white'
     this.title = title || ''
@@ -126,12 +127,14 @@ export default class RevealMd {
         const id = hash(src)
 
         if (!document.querySelector(`script#${id}`)) {
-          document.body.append(Object.assign(document.createElement('script'), {
-            id,
-            src,
-            async: true,
-            className: 'reveal-md--custom-js',
-          }))
+          document.body.append(
+            Object.assign(document.createElement('script'), {
+              id,
+              src,
+              async: true,
+              className: 'reveal-md--custom-js',
+            })
+          )
         }
       })
     }
@@ -141,12 +144,14 @@ export default class RevealMd {
         const id = hash(href)
 
         if (!document.querySelector(`link#${id}`)) {
-          document.head.append(Object.assign(document.createElement('link'), {
-            id,
-            href,
-            ref: 'stylesheet',
-            className: 'reveal-md--custom-css',
-          }))
+          document.head.append(
+            Object.assign(document.createElement('link'), {
+              id,
+              href,
+              ref: 'stylesheet',
+              className: 'reveal-md--custom-css',
+            })
+          )
         }
 
         return id
@@ -162,71 +167,87 @@ export default class RevealMd {
     this._headers = subH
   }
 
-  get markdown () {
+  get markdown() {
     return this._markdown
   }
 
-  set markdown (s: string) {
+  set markdown(s: string) {
     const globalEl = document.getElementById('global') as HTMLDivElement
     Array.from(globalEl.querySelectorAll('style.ref')).map((el) => el.remove())
 
     let xOffset = 0
-    const newRaw = s.split(/\r?\n(?:===|---)\r?\n/g).map((el, x) => {
-      this._raw[x] = this._raw[x] || []
-      const newRawSs = el.split(/\r?\n--\r?\n/g).map((ss) => this.parseSlide(ss))
-      if (newRawSs.every((ss) => !ss.html)) {
-        xOffset++
-      }
-
-      x -= xOffset
-
-      let yOffset = 0
-      return newRawSs.map((thisRaw, y) => {
-        if (!thisRaw.html) {
-          yOffset++
-          return
+    const newRaw = s
+      .split(/\r?\n(?:===|---)\r?\n/g)
+      .map((el, x) => {
+        this._raw[x] = this._raw[x] || []
+        const newRawSs = el
+          .split(/\r?\n--\r?\n/g)
+          .map((ss) => this.parseSlide(ss))
+        if (newRawSs.every((ss) => !ss.html)) {
+          xOffset++
         }
 
-        y -= yOffset
+        x -= xOffset
 
-        let section = this.getSlide(x)
-        let subSection = this.getSlide(x, y)
-
-        if (!this._raw[x][y] || (this._raw[x][y] && this._raw[x][y].raw !== thisRaw.raw)) {
-          const container = document.createElement('div')
-          container.className = 'container'
-          container.innerHTML = thisRaw.html
-
-          if (section && subSection) {
-            const oldContainers = subSection.getElementsByClassName('container')
-            Array.from(oldContainers).forEach((el) => el.remove())
-            subSection.appendChild(container)
-          } else {
-            subSection = document.createElement('section')
-            subSection.append(container)
-
-            if (section) {
-              section.appendChild(subSection)
-            } else {
-              section = document.createElement('section')
-              section.appendChild(subSection)
-              document.querySelector('.reveal .slides')!.appendChild(section)
+        let yOffset = 0
+        return newRawSs
+          .map((thisRaw, y) => {
+            if (!thisRaw.html) {
+              yOffset++
+              return
             }
-          }
 
-          Array.from(container.querySelectorAll('pre code:not(.hljs)')).forEach((el) => {
-            if (window.hljs) {
-              window.hljs.highlightBlock(el)
+            y -= yOffset
+
+            let section = this.getSlide(x)
+            let subSection = this.getSlide(x, y)
+
+            if (
+              !this._raw[x][y] ||
+              (this._raw[x][y] && this._raw[x][y].raw !== thisRaw.raw)
+            ) {
+              const container = document.createElement('div')
+              container.className = 'container'
+              container.innerHTML = thisRaw.html
+
+              if (section && subSection) {
+                const oldContainers = subSection.getElementsByClassName(
+                  'container'
+                )
+                Array.from(oldContainers).forEach((el) => el.remove())
+                subSection.appendChild(container)
+              } else {
+                subSection = document.createElement('section')
+                subSection.append(container)
+
+                if (section) {
+                  section.appendChild(subSection)
+                } else {
+                  section = document.createElement('section')
+                  section.appendChild(subSection)
+                  document
+                    .querySelector('.reveal .slides')!
+                    .appendChild(section)
+                }
+              }
+
+              Array.from(
+                container.querySelectorAll('pre code:not(.hljs)')
+              ).forEach((el) => {
+                if (window.hljs) {
+                  window.hljs.highlightBlock(el)
+                }
+              })
             }
+
+            return thisRaw
           })
-        }
-
-        return thisRaw
-      }).filter((el) => el)
-    }).filter((el) => el && el.length > 0) as ISlide[][]
+          .filter((el) => el)
+      })
+      .filter((el) => el && el.length > 0) as ISlide[][]
 
     this._raw.map((el, x) => {
-      el.map((ss, j) => {
+      el.map((_, j) => {
         const y = el.length - j - 1
 
         if (!newRaw[x] || !newRaw[x][y]) {
@@ -248,12 +269,12 @@ export default class RevealMd {
     this._raw = newRaw
   }
 
-  get title () {
+  get title() {
     const el = document.getElementsByTagName('title')[0]
     return el ? el.innerText : ''
   }
 
-  set title (t) {
+  set title(t) {
     let el = document.getElementsByTagName('title')[0]
     if (!el) {
       el = document.createElement('title')
@@ -262,7 +283,7 @@ export default class RevealMd {
     el.innerText = t
   }
 
-  get theme () {
+  get theme() {
     const el = document.getElementById('reveal-theme') as HTMLLinkElement
     const m = /\/(\S+)\.css$/.exec(el.href)
     if (m) {
@@ -272,18 +293,18 @@ export default class RevealMd {
     return ''
   }
 
-  set theme (t) {
+  set theme(t) {
     const el = document.getElementById('reveal-theme') as HTMLLinkElement
     el.href = `${this.cdn}css/theme/${t}.css`
   }
 
-  update (raw: string) {
-    const { data, content } = matter(raw)
+  update(raw: string) {
+    const { header, content } = this.matter.parse(raw)
     this.markdown = content
-    this.headers = data
+    this.headers = header
   }
 
-  onReady (fn?: (reveal?: RevealStatic) => void) {
+  onReady(fn?: (reveal?: RevealStatic) => void) {
     const reveal = window.Reveal
     if (reveal) {
       if (!(reveal as any).isReady()) {
@@ -321,7 +342,7 @@ export default class RevealMd {
     }
   }
 
-  parseSlide (text: string): ISlide {
+  parseSlide(text: string): ISlide {
     const id = hash(text)
     const raw = text
     let type: 'hidden' | 'global' | 'regular' = 'regular'
@@ -336,59 +357,65 @@ export default class RevealMd {
       html = lines.join('\n')
     }
 
-    html = html.replace(/(?:^|\n)\/\/ css=([A-Za-z0-9\-_]+\.css)(?:$|\n)/g, (p0, ref: string) => {
-      const i = raw.indexOf(p0)
-      const globalEl = document.getElementById('global') as HTMLDivElement
-      const className = `ref${i}`
-
-      let el = globalEl.querySelector(`style.ref.${className}`)
-      if (!el) {
-        el = document.createElement('style')
-        el.classList.add('ref', className)
-        globalEl.appendChild(el)
-      }
-
-      let url = ref
-      if (!ref.includes('://')) {
-        url = `/api/data?${qs.stringify({
-          filename: ref,
-        })}`
-      }
-
-      fetch(url).then((r) => r.text()).then((content) => {
-        if (type !== 'global') {
-          content = scopeCss(content, `#${id}`)
-        }
-        el!.innerHTML = content
-      })
-
-      return ''
-    })
-
-    html = html.replace(/(?:^|\n)(\/\/ slide\n)?```(\S+)\n([^]+?)\n```(?:$|\n)/g, (p0, subtype, lang, content) => {
-      if (type !== 'global' && !subtype) {
-        return p0
-      }
-
-      if (lang === 'css') {
+    html = html.replace(
+      /(?:^|\n)\/\/ css=([A-Za-z0-9\-_]+\.css)(?:$|\n)/g,
+      (p0, ref: string) => {
+        const i = raw.indexOf(p0)
         const globalEl = document.getElementById('global') as HTMLDivElement
-        if (type !== 'global') {
-          content = scopeCss(content, `#${id}`)
-        }
-        let el = globalEl.querySelector('style.main')
+        const className = `ref${i}`
+
+        let el = globalEl.querySelector(`style.ref.${className}`)
         if (!el) {
           el = document.createElement('style')
-          el.className = 'main'
+          el.classList.add('ref', className)
           globalEl.appendChild(el)
         }
-        el.innerHTML = content
+
+        let url = ref
+        if (!ref.includes('://')) {
+          url = `/api/data?filename=${encodeURIComponent(ref)}`
+        }
+
+        fetch(url)
+          .then((r) => r.text())
+          .then((content) => {
+            if (type !== 'global') {
+              content = stylis(`#${id}`, content)
+            }
+            el!.innerHTML = content
+          })
+
         return ''
-      } else if (lang === 'pre') {
-        return h('pre', content).outerHTML
-      } else {
-        return this.makeHtml(content, lang)
       }
-    })
+    )
+
+    html = html.replace(
+      /(?:^|\n)(\/\/ slide\n)?```(\S+)\n([^]+?)\n```(?:$|\n)/g,
+      (p0, subtype, lang, content) => {
+        if (type !== 'global' && !subtype) {
+          return p0
+        }
+
+        if (lang === 'css') {
+          const globalEl = document.getElementById('global') as HTMLDivElement
+          if (type !== 'global') {
+            content = stylis(`#${id}`, content)
+          }
+          let el = globalEl.querySelector('style.main')
+          if (!el) {
+            el = document.createElement('style')
+            el.className = 'main'
+            globalEl.appendChild(el)
+          }
+          el.innerHTML = content
+          return ''
+        } else if (lang === 'pre') {
+          return `<pre>${he.encode(content)}</pre>`
+        } else {
+          return this.makeHtml(content, lang)
+        }
+      }
+    )
 
     if (type === 'global') {
       document.body.insertAdjacentHTML('beforeend', html)
@@ -396,22 +423,22 @@ export default class RevealMd {
     }
 
     return {
-      html: h(`#${id}`, {
-        innerHTML: this.makeHtml(html),
-      }).outerHTML,
+      html: `<div id="${id}">${this.makeHtml(html)}</div>`,
       raw,
       id,
       type,
     }
   }
 
-  getSlide (x: number, y?: number) {
+  getSlide(x: number, y?: number) {
     const s = document.querySelectorAll('.slides > section')
     const hSlide = s[x]
 
     if (typeof y === 'number') {
       if (hSlide) {
-        return Array.from(hSlide.children).filter((el) => el.tagName.toLocaleUpperCase() === 'SECTION')[y]
+        return Array.from(hSlide.children).filter(
+          (el) => el.tagName.toLocaleUpperCase() === 'SECTION'
+        )[y]
       }
 
       return undefined
@@ -421,16 +448,16 @@ export default class RevealMd {
   }
 }
 
-function hash (str: string) {
+function hash(str: string) {
   var hash = 0
   for (var i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash = (hash << 5) - hash + str.charCodeAt(i)
     hash = hash & hash
   }
   return 'h' + Math.round(Math.abs(hash)).toString(36)
 }
 
-function dumpObj (obj: any) {
+function dumpObj(obj: any) {
   return yaml.safeDump(obj, {
     sortKeys: true,
     skipInvalid: true,

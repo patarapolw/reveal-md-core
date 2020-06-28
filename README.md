@@ -19,8 +19,8 @@ See <https://github.com/patarapolw/reveal-md>.
 
 ## Installation
 
-```
-npm i https://github.com/patarapolw/reveal-md-core.git
+```sh
+npm i @patarapolw/reveal-md-core.git
 ```
 
 ## Local Reveal.js files
